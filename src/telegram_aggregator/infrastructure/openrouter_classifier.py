@@ -7,22 +7,25 @@ from openai import OpenAI
 
 
 class OpenrouterClassifier(Classifier):
-    def __init__(self, *, model: str, api_key: str) -> None:
+    def __init__(self, *, model: str, api_key: str, temperature: float) -> None:
         self.model = model
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key
         )
+        self.temperature = temperature
 
-    def filter_content(self, *, filter_prompt: str, content: str) -> FilterContentModel | None:
+    def filter_content(self, *, filter_prompt: str, content: str, temperature: float | None = None) -> FilterContentModel | None:
         try:
+            current_temp = temperature if temperature is not None else self.temperature
             prompt = CLASSIFY_TEMPLATE.format(text=content, filter=filter_prompt)
             messages: list[ChatCompletionUserMessageParam] = [{"role": "user", "content": prompt}]
 
             response = self.client.beta.chat.completions.parse(
                 model=self.model,
                 messages=messages,
-                response_format=FilterContentModel
+                response_format=FilterContentModel,
+                temperature=current_temp
             )
             parsed: FilterContentModel = response.choices[0].message.parsed
             return parsed
